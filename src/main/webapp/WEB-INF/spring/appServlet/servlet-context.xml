@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc https://www.springframework.org/schema/mvc/spring-mvc.xsd
+		http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd">
+
+	<!-- xmlns => default namespace xmlns : 접두사 => 접두사:tag이름 접두사:속성이름 -->
+	<!-- id : 빈 객체의 고유 이름, 빈id를 이용해 빈에 접근 name : 객체의 별칭 class : 생성할 클래스, 패키지 
+		이름까지 입력 constructor-arg : 생성자를 이용해 값을 주입할 때 사용 property : setter를 이용해 값을 
+		주입할 때 사용 -->
+
+	<aop:aspectj-autoproxy></aop:aspectj-autoproxy>
+
+	<!-- DispatcherServlet Context: defines this servlet's request-processing 
+		infrastructure -->
+
+	<!-- Enables the Spring MVC @Controller programming model -->
+	<mvc:annotation-driven />
+
+	<!-- Handles HTTP GET requests for /resources/** by efficiently serving 
+		up static resources in the ${webappRoot}/resources directory -->
+	<mvc:resources mapping="/resources/**"
+		location="/resources/" />
+
+	<!-- Resolves views selected for rendering by @Controllers to .jsp resources 
+		in the /WEB-INF/views directory -->
+	<bean
+		class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="prefix" value="/WEB-INF/views/" />
+		<property name="suffix" value=".jsp" />
+	</bean>
+
+
+	<bean name="multipartResolver"
+		class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+		<property name="maxUploadSize" value="10000000" />
+	</bean>
+
+
+	<!-- FrontController인 DispatcherServlet가 읽는다 controller scan!! -->
+	<!-- <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource"> 
+		<property name="driverClassName" value="oracle.jdbc.driver.OracleDriver" 
+		/> <property name="url" value="jdbc:oracle:thin:@localhost:1521:xe" /> <property 
+		name="username" value="hr" /> <property name="password" value="hr" /> </bean> -->
+
+
+	<context:component-scan
+		base-package="com.shinhan.myapp,org.firstzone" />
+
+	<!-- Spring Database 연동!!(Data Source 설정 - DriverManager이용) p.110 -->
+	<bean
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="location"
+			value="/WEB-INF/spring/appServlet/oracleDB.properties" />
+		<property name="fileEncoding" value="UTF-8" />
+	</bean>
+
+	<!-- <jee:jndi-lookup id="dataSource" jndi-name="jdbc/myoracle" resource-ref="true" 
+		/> -->
+
+	<!-- DataSource -->
+	<bean id="dataSourceOriginal"
+		class="org.apache.commons.dbcp2.BasicDataSource">
+		<property name="driverClassName"
+			value="${jdbc.driverClassName}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+	</bean>
+
+	<bean id="dataSource"
+		class="net.sf.log4jdbc.Log4jdbcProxyDataSource">
+		<constructor-arg ref="dataSourceOriginal" />
+		<property name="logFormatter">
+			<bean class="net.sf.log4jdbc.tools.Log4JdbcCustomFormatter">
+				<property name="loggingType" value="MULTI_LINE"></property>
+				<property name="sqlPrefix" value="[ SQL문장 ] "></property>
+			</bean>
+		</property>
+	</bean>
+
+
+
+
+	<bean id="sqlSessionFactory"
+		class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource"></property>
+		<property name="configLocation"
+			value="classpath:mybatis/SqlMapConfig.xml" />
+		<property name="mapperLocations"
+			value="classpath:mybatis/mappers/*Mapper.xml" />
+	</bean>
+
+	<bean id="sqlSession"
+		class="org.mybatis.spring.SqlSessionTemplate">
+		<constructor-arg ref="sqlSessionFactory"></constructor-arg>
+	</bean>
+
+
+	<!-- Transaction 설정 (servlet-context.xml) -->
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource"></property>
+	</bean>
+
+	<!-- @Transactional을 스캔 -->
+	<tx:annotation-driven
+		transaction-manager="transactionManager" />
+
+
+	<!-- <bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource"> 
+		<property name="driverClassName" value="${jdbc.driverClassName}" /> <property 
+		name="url" value="${jdbc.url}" /> <property name="username" value="${jdbc.username}" 
+		/> <property name="password" value="${jdbc.password}" /> </bean> -->
+
+	<!-- <bean id="dataSource2" class="org.springframework.jdbc.datasource.DriverManagerDataSource"> 
+		<property name="driverClassName" value="${jdbc.driverClassName}" /> <property 
+		name="url" value="${jdbc.url}" /> <property name="username" value="${jdbc.username}" 
+		/> <property name="password" value="${jdbc.password}" /> </bean> -->
+
+</beans>
